@@ -1,13 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationExceptionFilter } from './common/filters/validation-exception.filter';
-import { ConfigService } from './config/config.service';
+import { ValidationExceptionFilter } from '@common/filters/validation-exception.filter';
+import { GlobalHttpExceptionFilter } from '@common/filters/global-http-exception.filter';
+import * as dotenv from 'dotenv';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const configService = app.get(ConfigService);
   app.enableCors();
   app.enableShutdownHooks();
   app.useGlobalPipes(
@@ -18,7 +18,12 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalFilters(new ValidationExceptionFilter());
+  dotenv.config();
+
+  app.useGlobalFilters(
+    new ValidationExceptionFilter(),
+    new GlobalHttpExceptionFilter(),
+  );
 
   const config = new DocumentBuilder()
     .addBearerAuth()
@@ -36,7 +41,12 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(configService.app.port);
+  const APP_PORT = process.env.APP_PORT ?? 3000;
+  await app.listen(APP_PORT, () => {
+    Logger.log(
+      `[NestApplication] 🤖 Beep boop, server online at port: ${APP_PORT}`,
+    );
+  });
 }
 
 bootstrap().catch((error) => {
